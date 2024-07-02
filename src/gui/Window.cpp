@@ -25,7 +25,7 @@ Window::Window(QWidget *parent) : QMainWindow(parent)
     setCentralWidget(centralWidget);
 }
 
-std::shared_ptr<HTMLElement> Window::createElement(const json &elementJson)
+std::shared_ptr<HTMLElement> Window::createElement(const json &elementJson, std::shared_ptr<HTMLElement> parent)
 {
     std::shared_ptr<HTMLElement> element = nullptr;
 
@@ -33,24 +33,35 @@ std::shared_ptr<HTMLElement> Window::createElement(const json &elementJson)
     {
         std::string tag = elementJson["tag"];
 
+        if (tag == "style")
+        {
+            std::string cssSource = elementJson["children"][0]["text"];
+            Stylesheet::parse(cssSource);
+        }
+
         if (tag == "html")
         {
-            element = std::make_shared<RootElement>();
+            std::shared_ptr<RootElement> root = std::make_shared<RootElement>();
+            auto window = this->centralWidget();
+
+            root->addProperty("width", std::format("{}", (int)window->geometry().width()));
+            root->addProperty("height", std::format("{}", (int)window->geometry().height()));
+            element = root;
         }
         else if (tag == "body")
         {
-            element = std::make_shared<BodyElement>();
+            element = std::make_shared<BodyElement>(parent);
         }
         else if (tag == "div")
         {
-            element = std::make_shared<DivElement>();
+            element = std::make_shared<DivElement>(parent);
         }
 
         if (elementJson.contains("children") && elementJson["children"].is_array())
         {
             for (const auto &childJson: elementJson["children"])
             {
-                auto childElement = createElement(childJson);
+                auto childElement = createElement(childJson, element);
 
                 // We can get a nullptr in the event that we don't
                 // yet support the type of node that we saw in the
@@ -95,12 +106,27 @@ void Window::handleEnterPressed()
     if (response.has_value())
     {
         // TODO: build the DOM and then trigger a render of the DOM
-        std::cout << response->dump(4) << std::endl;
+        // std::cout << response->dump(4) << std::endl;
         buildDOM(*response);
     } else
     {
         // TODO: Show a default "cannot load webpage" page
         std::cerr << std::format("Cannot load this webpage: {}\n", url);
+    }
+}
+
+void Window::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    QSize newSize = event->size();
+
+    // Since the DOM always has the top level root as
+    // the parent, if I update the root I
+    // can cascade resize events down to the children.
+    if (dom != nullptr)
+    {
+        dom->addProperty("width", std::format("{}", (int) newSize.width()));
+        dom->addProperty("height", std::format("{}", (int) newSize.height()));
     }
 }
 

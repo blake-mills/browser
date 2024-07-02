@@ -1,7 +1,7 @@
 #include "RootElement.hpp"
 
 RootElement::RootElement()
-:   HTMLElement(HTMLElement::Type::ROOT)
+:   HTMLElement("root", std::nullopt)
 {}
 
 void RootElement::render(QPainter *e)

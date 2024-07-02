@@ -14,23 +14,41 @@
 #include "gfx/Renderer.hpp"
 #include "components/ContentArea.hpp"
 
-class Window : public QMainWindow {
+
+#ifdef slots
+#undef slots
+#endif
+
+#include "stylesheet/Stylesheet.hpp"
+
+#ifndef slots
+#define slots Q_SLOTS
+#endif
+
+class Window
+        : public QMainWindow
+{
 Q_OBJECT
 
 public:
     explicit Window(QWidget *parent = nullptr);
+
     ~Window() override;
 
 private slots:
+
     void handleEnterPressed();
 
 private:
-    void buildDOM(const json& html);
-    std::shared_ptr<HTMLElement> createElement(const json& elementJson);
+    void buildDOM(const json &html);
+
+    std::shared_ptr<HTMLElement> createElement(const json &elementJson, std::shared_ptr<HTMLElement> parent = nullptr);
     std::shared_ptr<HTMLElement> dom;
 
+protected:
+    void resizeEvent(QResizeEvent* event) override;
 private:
-    SearchBar* searchBar;
-    ContentArea* contentArea;
+    SearchBar *searchBar;
+    ContentArea *contentArea;
     Renderer renderer;
 };
